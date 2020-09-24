@@ -14,9 +14,11 @@ const program = new Command()
   .option('-p, --preset [name]', `Preset config(eg ${Object.keys(presetConfig).join(', ')})`)
   .option('-P, --pattern [pattern]', `Glob patterns, default to ${presetConfig.default.pattern}`)
   .option('-i, --ignore [pattern]', `Ignore patterns, will merge to pattern, default to ${presetConfig.default.ignore.join(',')}`)
+  .option('--ignore-pattern [path]', 'Ignore file pattern')
   .option('--ignore-footnotes', `Ignore footnotes, default to ${presetConfig.default.ignoreFootnotes}`)
   .option('--exit-level [level]', `Process exit level, default to ${presetConfig.default.exitLevel}, other choice is warn and none, it will not exit if setting to none`)
-  .option('--default-index [index]', `Default index in directory, default to ${presetConfig.default.defaultIndex.join(',')}`);
+  .option('--default-index [index]', `Default index in directory, default to ${presetConfig.default.defaultIndex.join(',')}`)
+  .option('--strict-ext', 'Enables strict extension mode. Where a link to an md file must have the .md extension');
 
 program.parse(process.argv);
 
@@ -28,7 +30,9 @@ const options = {
   pattern: program.pattern ? program.pattern.split(',') : undefined,
   ignore: program.ignore ? program.ignore.split(',') : undefined,
   ignoreFootnotes: program.ignoreFootnotes,
+  ignorePattern: program.ignorePattern ? program.ignorePattern.split(',') : undefined,
   defaultIndex: program.defaultIndex ? program.defaultIndex.split(',') : undefined,
+  strictExt: program.strictExt ? program.strictExt : undefined,
 };
 
 Object.keys(options).forEach(k => {

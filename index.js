@@ -59,7 +59,9 @@ const presetConfig = {
  * @property {String} [CheckOption.preset]
  * @property {String | Array<String>} [CheckOption.pattern]
  * @property {String | Array<String>} [CheckOption.ignore]
+ * @property {String | Array<String>} [CheckOption.ignorePattern]
  * @property {Boolean} [CheckOption.ignoreFootnotes]
+ * @property {Boolean} [CheckOption.strictExt]
  */
 
 /**
@@ -219,7 +221,7 @@ function initOption(options) {
  */
 async function check(options) {
   options = initOption(options);
-  const { cwd, defaultIndex, root, fix, pattern, ignore, ignoreFootnotes } = options;
+  const { cwd, defaultIndex, root, fix, pattern, ignore, ignoreFootnotes, strictExt, ignorePattern } = options;
   assert(Array.isArray(root), 'options.root must be array');
   const globPattern = (Array.isArray(pattern) ? pattern : [ pattern ]).concat(
     (Array.isArray(ignore) ? ignore : [ ignore ]).map(p => `!${p}`)
@@ -299,8 +301,21 @@ async function check(options) {
           const pathname = urlObj.pathname || '';
           let ext = path.extname(pathname);
           let matchAbUrl;
+          let patternMatches = false;
 
-          if (pathname) {
+          if (Array.isArray(ignorePattern)) {
+            for (const pat of ignorePattern) {
+              const patt = new RegExp(pat);
+              patternMatches = patt.test(pathname);
+              if (patternMatches === true) {
+                break;
+              }
+            }
+          } else if (ignorePattern) {
+            const patt = new RegExp(ignorePattern);
+            patternMatches = patt.test(pathname);
+          }
+          if (pathname && !patternMatches) {
             if (pathname.charAt(0) === '/') {
               // find exist file
               matchAbUrl = root.map(r => normalizeUrl(path.join(cwd, r, pathname.substring(1)), ext))
@@ -321,6 +336,19 @@ async function check(options) {
               urlObj.pathname = `${urlObj.pathname.substring(0, urlObj.pathname.length - 4)}md`;
             } else {
               result.warning.list.push({ ...baseReportObj, errMsg: 'Should use .md instead of .html' });
+            }
+          }
+          // md file should always have .md extension to not confused with any other type of file
+          if (ext === '' && strictExt) {
+            const dirBaseFileWithSlash = `${urlObj.path}/README.md`.slice(1);
+            const dirBaseFile = `${urlObj.path}README.md`.slice(1);
+            // Check if missing extension link is a directory with a base README.md file
+            if (!(files.includes(dirBaseFileWithSlash) || files.includes(dirBaseFile))) {
+              const fileWithMDext = `${urlObj.path}.md`.slice(1);
+              // Check if missing extension link is a known markdown file.
+              if (files.includes(fileWithMDext)) {
+                result.warning.list.push({ ...baseReportObj, errMsg: 'File found with this name but .md extension missing' });
+              }
             }
           }
 
